@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    container_name: lab-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_DATABASE_NAME} -h localhost || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lab-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_DATABASE_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"
+      YOOKASSA_BASE_URL: ${YOOKASSA_BASE_URL:-https://api.yookassa.ru/v3}
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-1301903}
+      YOOKASSA_API_KEY: ${YOOKASSA_API_KEY:-test_IEOqnyv6X31GfBM7BXi8hiTDnfDCbBLoLbbhx8KSHxo}
+      YOOKASSA_RETURN_URL: ${YOOKASSA_RETURN_URL:-https://www.example.com/return_url}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
