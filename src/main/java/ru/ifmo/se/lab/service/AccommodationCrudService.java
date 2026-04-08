@@ -42,12 +42,12 @@ public class AccommodationCrudService {
             String sortDir) {
         if (principal.getRole() == AppRole.ADMIN) {
             Sort sort = buildSort(sortBy, sortDir);
-            Page<Accommodation> accommodations = accommodationRepository.findAll(PageRequest.of(page, size, sort));
+            Page<Accommodation> accommodations = accommodationRepository.findAllWithHost(PageRequest.of(page, size, sort));
             return buildAccommodationPageResponse(accommodations);
         }
 
         if (principal.getRole() == AppRole.HOST) {
-            List<Accommodation> accommodations = accommodationRepository.findAllByHostId(principal.getId());
+            List<Accommodation> accommodations = accommodationRepository.findAllByHostIdWithHost(principal.getId());
             List<Accommodation> sorted = sortAccommodations(accommodations, sortBy, sortDir);
             return buildAccommodationPageResponse(sorted, page, size);
         }

@@ -45,6 +45,21 @@ public class GlobalExceptionHandler {
                                                 .build());
         }
 
+        @ExceptionHandler(IllegalStateException.class)
+        public ResponseEntity<ErrorResponse> handleIllegalStateException(
+                        IllegalStateException e,
+                        HttpServletRequest request) {
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                                ErrorResponse.builder()
+                                                .timestamp(Instant.now())
+                                                .status(HttpStatus.CONFLICT.value())
+                                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                                .message(e.getMessage())
+                                                .path(request.getRequestURI())
+                                                .build());
+        }
+
         @ExceptionHandler(MethodArgumentNotValidException.class)
         public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(
                         MethodArgumentNotValidException ex,
