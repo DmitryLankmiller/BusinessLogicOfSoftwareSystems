@@ -9,6 +9,7 @@ ADMIN_ROLE="ADMIN"
 HOST_ROLE="HOST"
 USER_ROLE="USER"
 
+export JSON_HEADER=(-H "Content-Type: application/json")
 export TOKEN=$(curl -X POST "$BASE_URL/auth/signin" \
   "${JSON_HEADER[@]}" \
   -d '{
@@ -16,7 +17,6 @@ export TOKEN=$(curl -X POST "$BASE_URL/auth/signin" \
     "password": "admin123"
   }' | jq -r '.token')
 
-export JSON_HEADER=(-H "Content-Type: application/json")
 
 curl -X POST "$BASE_URL/auth/signin" \
   "${JSON_HEADER[@]}" \

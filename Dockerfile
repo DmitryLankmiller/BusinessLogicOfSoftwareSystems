@@ -1,22 +1,34 @@
-FROM eclipse-temurin:21-jdk AS builder
+FROM gradle:8.10.2-jdk21 AS builder
 
 WORKDIR /app
 
-COPY gradlew .
-COPY gradle gradle
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
+COPY gradle gradle
+COPY gradlew .
 COPY src src
 
 RUN chmod +x gradlew
-RUN ./gradlew bootJar --no-daemon
+RUN ./gradlew clean bootWar --no-daemon
 
-FROM eclipse-temurin:21-jre
 
-WORKDIR /app
+FROM quay.io/wildfly/wildfly:latest-jdk21
 
-COPY --from=builder /app/build/libs/*.jar app.jar
+USER root
+
+RUN mkdir -p /opt/jboss/wildfly/customization
+
+ADD https://jdbc.postgresql.org/download/postgresql-42.7.4.jar /opt/jboss/wildfly/postgresql.jar
+
+COPY wildfly/postgres-datasource.cli /opt/jboss/wildfly/customization/postgres-datasource.cli
+
+RUN /opt/jboss/wildfly/bin/jboss-cli.sh --file=/opt/jboss/wildfly/customization/postgres-datasource.cli
+
+RUN /opt/jboss/wildfly/bin/add-user.sh admin admin123 --silent
+
+COPY --from=builder /app/build/libs/lab.war /opt/jboss/wildfly/standalone/deployments/lab.war
 
 EXPOSE 8080
+EXPOSE 9990
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+CMD ["/opt/jboss/wildfly/bin/standalone.sh", "-b", "0.0.0.0", "-bmanagement", "0.0.0.0"]

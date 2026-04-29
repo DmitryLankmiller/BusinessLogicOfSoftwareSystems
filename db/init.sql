@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS app_user (
 );
 
 INSERT INTO app_user (login, name, email, password, role)
-VALUES ('admin', 'Admin', 'admin@mail.ru', 'admin123', 'ROLE_ADMIN'),
-       ('user1', 'User One', 'user1@mail.ru', '123456', 'ROLE_USER'),
-       ('host1', 'Host One', 'host1@mail.ru', '123456', 'ROLE_HOST');
+VALUES ('admin', 'Admin', 'admin@mail.ru', '$2a$10$v7mCqVeo9iyLMUtdqoecNu/iLCqgbJfNvrr2lDTnkiyqB/LHZeAW2', 'ROLE_ADMIN'),
+       ('user1', 'User One', 'user1@mail.ru', '$2a$10$nF10lKIg55m/q2PwoL0JJeCPO0Efi4KDL7S0QMpCaLrBuMK5Rb.u6', 'ROLE_USER'),
+       ('host1', 'Host One', 'host1@mail.ru', '$2a$10$nF10lKIg55m/q2PwoL0JJeCPO0Efi4KDL7S0QMpCaLrBuMK5Rb.u6', 'ROLE_HOST');
 
 CREATE TABLE IF NOT EXISTS accommodation (
     id SERIAL PRIMARY KEY,
