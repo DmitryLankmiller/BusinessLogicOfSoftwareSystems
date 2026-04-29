@@ -9,5 +9,5 @@ import ru.ifmo.se.lab.model.PaymentData;
 
 @Repository
 public interface PaymentDataRepository extends JpaRepository<PaymentData, Integer> {
-    List<PaymentData> findAllByUserId(int userId);
+    List<PaymentData> findAllByUserId(long userId);
 }

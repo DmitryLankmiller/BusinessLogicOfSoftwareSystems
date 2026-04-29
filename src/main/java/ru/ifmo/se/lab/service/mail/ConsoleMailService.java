@@ -1,16 +1,18 @@
-package ru.ifmo.se.lab.service;
+package ru.ifmo.se.lab.service.mail;
 
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import ru.ifmo.se.lab.model.Booking;
 import ru.ifmo.se.lab.model.BookingRequest;
 
 @Service
+@Slf4j
 public class ConsoleMailService implements MailService {
 
     @Override
     public void send(String to, String subject, String body) {
-        System.out.printf("Sending email to=%s subject=%s body=%s%n", to, subject, body);
+        log.info("Sending email to=%s subject=%s body=%s\n".formatted(to, subject, body));
     }
 
     @Override
@@ -21,6 +23,7 @@ public class ConsoleMailService implements MailService {
                 "New booking request for accommodation %d from user %d".formatted(
                         bookingRequest.getAccommodation().getId(),
                         bookingRequest.getClient().getId()));
+        // throw new RuntimeException("Test exception");
     }
 
     @Override
@@ -31,6 +34,16 @@ public class ConsoleMailService implements MailService {
                 "Booking %d was confirmed for accommodation %d".formatted(
                         booking.getId(),
                         booking.getAccommodation().getId()));
+    }
+
+    @Override
+    public void sendCaptureFailedToClient(int bookingId, String userEmail, int accommodationId) {
+        send(
+                userEmail,
+                "Capture for booking failed",
+                "Capture for booking %d for accommodation %d was failed".formatted(
+                        bookingId,
+                        accommodationId));
     }
 
     @Override

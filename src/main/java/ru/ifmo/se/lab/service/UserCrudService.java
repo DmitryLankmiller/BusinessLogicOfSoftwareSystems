@@ -15,10 +15,11 @@ import ru.ifmo.se.lab.dto.DtoMapper;
 import ru.ifmo.se.lab.dto.PageResponse;
 import ru.ifmo.se.lab.dto.UserDto;
 import ru.ifmo.se.lab.exception.ResourceNotFoundException;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.User;
 import ru.ifmo.se.lab.repository.UserRepository;
 import ru.ifmo.se.lab.security.AppPrincipal;
-import ru.ifmo.se.lab.security.AppRole;
+import ru.ifmo.se.lab.security.SecurityUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +28,8 @@ public class UserCrudService {
 
     private final UserRepository userRepository;
 
-    public PageResponse<UserDto> findUsers(AppPrincipal principal, int page, int size, String sortBy, String sortDir) {
+    public PageResponse<UserDto> findUsers(int page, int size, String sortBy, String sortDir) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         Sort sort = buildSort(sortBy, sortDir);
@@ -35,17 +37,17 @@ public class UserCrudService {
         return buildUserPageResponse(users);
     }
 
-    public UserDto findUserById(AppPrincipal principal, int id) {
+    public UserDto findUserById(int id) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
-        System.out.println("here1");
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User with id=%d not found".formatted(id)));
-        System.out.println("here2");
         return DtoMapper.toDto(user);
     }
 
-    public UserDto addUser(AppPrincipal principal, UserDto userDto) {
+    public UserDto addUser(UserDto userDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         User user = DtoMapper.toEntity(userDto);
@@ -53,7 +55,8 @@ public class UserCrudService {
         return DtoMapper.toDto(savedUser);
     }
 
-    public UserDto updateUser(AppPrincipal principal, int id, UserDto userDto) {
+    public UserDto updateUser(int id, UserDto userDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         User user = userRepository.findById(id)
@@ -62,12 +65,15 @@ public class UserCrudService {
         user.setLogin(userDto.getLogin());
         user.setName(userDto.getName());
         user.setEmail(userDto.getEmail());
+        user.setPassword(userDto.getPassword());
+        user.setRole(AppRole.valueOf(userDto.getRole()));
 
         User savedUser = userRepository.save(user);
         return DtoMapper.toDto(savedUser);
     }
 
-    public void deleteUser(AppPrincipal principal, int id) {
+    public void deleteUser(int id) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         User user = userRepository.findById(id)
@@ -77,7 +83,7 @@ public class UserCrudService {
     }
 
     private void requireAdmin(AppPrincipal principal) {
-        if (principal.getRole() != AppRole.ADMIN) {
+        if (principal.getRole() != AppRole.ROLE_ADMIN) {
             throw new AccessDeniedException("Access denied");
         }
     }

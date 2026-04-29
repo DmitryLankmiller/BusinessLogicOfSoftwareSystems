@@ -3,6 +3,7 @@ package ru.ifmo.se.lab.dto;
 import ru.ifmo.se.lab.dto.payment.PaymentDataDto;
 import ru.ifmo.se.lab.dto.payment.YookassaPaymentDataDto;
 import ru.ifmo.se.lab.model.Accommodation;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.Booking;
 import ru.ifmo.se.lab.model.BookingRequest;
 import ru.ifmo.se.lab.model.PaymentData;
@@ -16,6 +17,8 @@ public class DtoMapper {
                 .login(user.getLogin())
                 .name(user.getName())
                 .email(user.getEmail())
+                .password("********")
+                .role(user.getRole().toString())
                 .build();
     }
 
@@ -24,6 +27,8 @@ public class DtoMapper {
                 .login(userDto.getLogin())
                 .name(userDto.getName())
                 .email(userDto.getEmail())
+                .password(userDto.getPassword())
+                .role(AppRole.valueOf(userDto.getRole()))
                 .build();
     }
 

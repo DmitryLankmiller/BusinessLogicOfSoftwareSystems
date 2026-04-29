@@ -15,13 +15,14 @@ import ru.ifmo.se.lab.dto.PageResponse;
 import ru.ifmo.se.lab.dto.payment.PaymentDataDto;
 import ru.ifmo.se.lab.dto.payment.YookassaPaymentDataDto;
 import ru.ifmo.se.lab.exception.ResourceNotFoundException;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.PaymentData;
 import ru.ifmo.se.lab.model.User;
 import ru.ifmo.se.lab.model.YookassaPaymentData;
 import ru.ifmo.se.lab.repository.PaymentDataRepository;
 import ru.ifmo.se.lab.repository.UserRepository;
 import ru.ifmo.se.lab.security.AppPrincipal;
-import ru.ifmo.se.lab.security.AppRole;
+import ru.ifmo.se.lab.security.SecurityUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -30,8 +31,9 @@ public class PaymentDataCrudService {
     private final PaymentDataRepository paymentDataRepository;
     private final UserRepository userRepository;
 
-    public PageResponse<PaymentDataDto> findPaymentData(AppPrincipal principal, int page, int size, String sortBy,
+    public PageResponse<PaymentDataDto> findPaymentData(int page, int size, String sortBy,
             String sortDir) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         Sort sort = buildSort(sortBy, sortDir);
@@ -39,7 +41,8 @@ public class PaymentDataCrudService {
         return buildPaymentDataPageResponse(paymentData);
     }
 
-    public PaymentDataDto findPaymentDataById(AppPrincipal principal, int id) {
+    public PaymentDataDto findPaymentDataById(int id) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         PaymentData paymentData = paymentDataRepository.findById(id)
@@ -48,7 +51,8 @@ public class PaymentDataCrudService {
         return DtoMapper.toDto(paymentData);
     }
 
-    public PaymentDataDto addPaymentData(AppPrincipal principal, PaymentDataDto paymentDataDto) {
+    public PaymentDataDto addPaymentData(PaymentDataDto paymentDataDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         User user = userRepository.findById(paymentDataDto.getUserId())
@@ -60,7 +64,8 @@ public class PaymentDataCrudService {
         return DtoMapper.toDto(savedPaymentData);
     }
 
-    public PaymentDataDto updatePaymentData(AppPrincipal principal, int id, PaymentDataDto paymentDataDto) {
+    public PaymentDataDto updatePaymentData(int id, PaymentDataDto paymentDataDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         PaymentData paymentData = paymentDataRepository.findById(id)
@@ -82,7 +87,8 @@ public class PaymentDataCrudService {
         return DtoMapper.toDto(savedPaymentData);
     }
 
-    public void deletePaymentData(AppPrincipal principal, int id) {
+    public void deletePaymentData(int id) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         requireAdmin(principal);
 
         PaymentData paymentData = paymentDataRepository.findById(id)
@@ -92,7 +98,7 @@ public class PaymentDataCrudService {
     }
 
     private void requireAdmin(AppPrincipal principal) {
-        if (principal.getRole() != AppRole.ADMIN) {
+        if (principal.getRole() != AppRole.ROLE_ADMIN) {
             throw new AccessDeniedException("Access denied");
         }
     }

@@ -2,11 +2,15 @@ CREATE TABLE IF NOT EXISTS app_user (
     id SERIAL PRIMARY KEY,
     login TEXT UNIQUE NOT NULL CHECK (login <> ''),
     name TEXT NOT NULL CHECK (name <> ''),
-    email TEXT UNIQUE NOT NULL CHECK (email <> '')
+    email TEXT UNIQUE NOT NULL CHECK (email <> ''),
+    password TEXT NOT NULL CHECK (password <> ''),
+    role TEXT NOT NULL CHECK (role <> '')
 );
 
-INSERT INTO app_user (login, name, email)
-VALUES ('admin', 'Admin', 'admin@mail.ru'), ('user1', 'User One', 'user1@mail.ru'), ('host1', 'Host One', 'host1@mail.ru');
+INSERT INTO app_user (login, name, email, password, role)
+VALUES ('admin', 'Admin', 'admin@mail.ru', 'admin123', 'ROLE_ADMIN'),
+       ('user1', 'User One', 'user1@mail.ru', '123456', 'ROLE_USER'),
+       ('host1', 'Host One', 'host1@mail.ru', '123456', 'ROLE_HOST');
 
 CREATE TABLE IF NOT EXISTS accommodation (
     id SERIAL PRIMARY KEY,

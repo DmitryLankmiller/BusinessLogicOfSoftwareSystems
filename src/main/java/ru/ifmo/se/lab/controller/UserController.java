@@ -18,7 +18,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import ru.ifmo.se.lab.dto.PageResponse;
 import ru.ifmo.se.lab.dto.UserDto;
-import ru.ifmo.se.lab.security.SecurityUtils;
 import ru.ifmo.se.lab.service.UserCrudService;
 
 @RestController
@@ -36,19 +35,19 @@ public class UserController {
             @RequestParam(value = "size", defaultValue = "10") @Positive int size,
             @RequestParam(value = "sort_by", defaultValue = "id") String sortBy,
             @RequestParam(value = "sort_dir", defaultValue = "asc") String sortDir) {
-        return userCrudService.findUsers(SecurityUtils.getCurrentPrincipal(), page, size, sortBy, sortDir);
+        return userCrudService.findUsers(page, size, sortBy, sortDir);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public UserDto getUserById(@PathVariable @Positive int id) {
-        return userCrudService.findUserById(SecurityUtils.getCurrentPrincipal(), id);
+        return userCrudService.findUserById(id);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public UserDto createUser(@RequestBody @Valid UserDto userDto) {
-        return userCrudService.addUser(SecurityUtils.getCurrentPrincipal(), userDto);
+        return userCrudService.addUser(userDto);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -56,12 +55,12 @@ public class UserController {
     public UserDto updateUser(
             @PathVariable @Positive int id,
             @RequestBody @Valid UserDto userDto) {
-        return userCrudService.updateUser(SecurityUtils.getCurrentPrincipal(), id, userDto);
+        return userCrudService.updateUser(id, userDto);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable @Positive int id) {
-        userCrudService.deleteUser(SecurityUtils.getCurrentPrincipal(), id);
+        userCrudService.deleteUser(id);
     }
 }

@@ -18,7 +18,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import ru.ifmo.se.lab.dto.PageResponse;
 import ru.ifmo.se.lab.dto.payment.PaymentDataDto;
-import ru.ifmo.se.lab.security.SecurityUtils;
 import ru.ifmo.se.lab.service.PaymentDataCrudService;
 
 @RestController
@@ -36,19 +35,19 @@ public class PaymentDataController {
             @RequestParam(value = "size", defaultValue = "10") @Positive int size,
             @RequestParam(value = "sort_by", defaultValue = "id") String sortBy,
             @RequestParam(value = "sort_dir", defaultValue = "asc") String sortDir) {
-        return paymentDataCrudService.findPaymentData(SecurityUtils.getCurrentPrincipal(), page, size, sortBy, sortDir);
+        return paymentDataCrudService.findPaymentData(page, size, sortBy, sortDir);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public PaymentDataDto getPaymentDataById(@PathVariable @Positive int id) {
-        return paymentDataCrudService.findPaymentDataById(SecurityUtils.getCurrentPrincipal(), id);
+        return paymentDataCrudService.findPaymentDataById(id);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public PaymentDataDto createPaymentData(@RequestBody @Valid PaymentDataDto paymentDataDto) {
-        return paymentDataCrudService.addPaymentData(SecurityUtils.getCurrentPrincipal(), paymentDataDto);
+        return paymentDataCrudService.addPaymentData(paymentDataDto);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -56,12 +55,12 @@ public class PaymentDataController {
     public PaymentDataDto updatePaymentData(
             @PathVariable @Positive int id,
             @RequestBody @Valid PaymentDataDto paymentDataDto) {
-        return paymentDataCrudService.updatePaymentData(SecurityUtils.getCurrentPrincipal(), id, paymentDataDto);
+        return paymentDataCrudService.updatePaymentData(id, paymentDataDto);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public void deletePaymentData(@PathVariable @Positive int id) {
-        paymentDataCrudService.deletePaymentData(SecurityUtils.getCurrentPrincipal(), id);
+        paymentDataCrudService.deletePaymentData(id);
     }
 }

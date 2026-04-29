@@ -18,8 +18,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import ru.ifmo.se.lab.dto.BookingDto;
 import ru.ifmo.se.lab.dto.PageResponse;
-import ru.ifmo.se.lab.security.SecurityUtils;
-import ru.ifmo.se.lab.service.BookingCrudService;
+import ru.ifmo.se.lab.service.booking.BookingCrudService;
 
 @RestController
 @RequestMapping("/bookings")
@@ -35,7 +34,7 @@ public class BookingController {
             @RequestParam(value = "size", defaultValue = "10") @Positive int size,
             @RequestParam(value = "sort_by", defaultValue = "id") String sortBy,
             @RequestParam(value = "sort_dir", defaultValue = "asc") String sortDir) {
-        return bookingCrudService.findBookings(SecurityUtils.getCurrentPrincipal(), page, size, sortBy, sortDir);
+        return bookingCrudService.findBookings(page, size, sortBy, sortDir);
     }
 
     @GetMapping(params = "accommodation")
@@ -45,19 +44,19 @@ public class BookingController {
             @RequestParam(value = "size", defaultValue = "10") @Positive int size,
             @RequestParam(value = "sort_by", defaultValue = "id") String sortBy,
             @RequestParam(value = "sort_dir", defaultValue = "asc") String sortDir) {
-        return bookingCrudService.findBookingsByAccommodation(SecurityUtils.getCurrentPrincipal(), accommodationId,
+        return bookingCrudService.findBookingsByAccommodation(accommodationId,
                 page, size, sortBy, sortDir);
     }
 
     @GetMapping("/{id}")
     public BookingDto getBookingById(@PathVariable @Positive int id) {
-        return bookingCrudService.findBookingById(SecurityUtils.getCurrentPrincipal(), id);
+        return bookingCrudService.findBookingById(id);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public BookingDto createBooking(@RequestBody @Valid BookingDto bookingDto) {
-        return bookingCrudService.addBooking(SecurityUtils.getCurrentPrincipal(), bookingDto);
+        return bookingCrudService.addBooking(bookingDto);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -65,12 +64,12 @@ public class BookingController {
     public BookingDto updateBooking(
             @PathVariable @Positive int id,
             @RequestBody @Valid BookingDto bookingDto) {
-        return bookingCrudService.updateBooking(SecurityUtils.getCurrentPrincipal(), id, bookingDto);
+        return bookingCrudService.updateBooking(id, bookingDto);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteBooking(@PathVariable @Positive int id) {
-        bookingCrudService.deleteBooking(SecurityUtils.getCurrentPrincipal(), id);
+        bookingCrudService.deleteBooking(id);
     }
 }

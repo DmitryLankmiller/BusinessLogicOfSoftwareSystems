@@ -11,9 +11,9 @@ import ru.ifmo.se.lab.model.BookingRequest;
 public interface BookingRequestRepository extends JpaRepository<BookingRequest, Integer> {
     List<BookingRequest> findAllByAccommodationId(int accommodationId);
 
-    List<BookingRequest> findAllByClientId(int clientId);
+    List<BookingRequest> findAllByClientId(long clientId);
 
-    List<BookingRequest> findAllByHostId(int hostId);
+    List<BookingRequest> findAllByHostId(long hostId);
 
-    List<BookingRequest> findAllByAccommodationIdAndHostId(int accommodationId, int hostId);
+    List<BookingRequest> findAllByAccommodationIdAndHostId(int accommodationId, long hostId);
 }

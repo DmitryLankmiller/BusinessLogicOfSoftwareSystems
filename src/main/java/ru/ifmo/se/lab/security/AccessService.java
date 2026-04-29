@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import ru.ifmo.se.lab.model.Accommodation;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.Booking;
 import ru.ifmo.se.lab.model.BookingRequest;
 
@@ -13,11 +14,11 @@ import ru.ifmo.se.lab.model.BookingRequest;
 public class AccessService {
 
     public void checkAccommodationReadAccess(AppPrincipal principal, Accommodation accommodation) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             return;
         }
 
-        if (principal.getRole() == AppRole.HOST && accommodation.getHost().getId() == principal.getId()) {
+        if (principal.getRole() == AppRole.ROLE_HOST && accommodation.getHost().getId() == principal.getId()) {
             return;
         }
 
@@ -29,11 +30,11 @@ public class AccessService {
     }
 
     public void checkAccommodationCreateAccess(AppPrincipal principal, int hostId) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             return;
         }
 
-        if (principal.getRole() == AppRole.HOST && principal.getId() == hostId) {
+        if (principal.getRole() == AppRole.ROLE_HOST && principal.getId() == hostId) {
             return;
         }
 
@@ -41,15 +42,15 @@ public class AccessService {
     }
 
     public void checkBookingReadAccess(AppPrincipal principal, Booking booking) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             return;
         }
 
-        if (principal.getRole() == AppRole.USER && booking.getUser().getId() == principal.getId()) {
+        if (principal.getRole() == AppRole.ROLE_USER && booking.getUser().getId() == principal.getId()) {
             return;
         }
 
-        if (principal.getRole() == AppRole.HOST && booking.getAccommodation().getHost().getId() == principal.getId()) {
+        if (principal.getRole() == AppRole.ROLE_HOST && booking.getAccommodation().getHost().getId() == principal.getId()) {
             return;
         }
 
@@ -57,15 +58,15 @@ public class AccessService {
     }
 
     public void checkBookingRequestReadAccess(AppPrincipal principal, BookingRequest bookingRequest) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             return;
         }
 
-        if (principal.getRole() == AppRole.USER && bookingRequest.getClient().getId() == principal.getId()) {
+        if (principal.getRole() == AppRole.ROLE_USER && bookingRequest.getClient().getId() == principal.getId()) {
             return;
         }
 
-        if (principal.getRole() == AppRole.HOST && bookingRequest.getHost().getId() == principal.getId()) {
+        if (principal.getRole() == AppRole.ROLE_HOST && bookingRequest.getHost().getId() == principal.getId()) {
             return;
         }
 
@@ -73,11 +74,11 @@ public class AccessService {
     }
 
     public void checkBookingRequestResolveAccess(AppPrincipal principal, BookingRequest bookingRequest) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             return;
         }
 
-        if (principal.getRole() == AppRole.HOST && bookingRequest.getHost().getId() == principal.getId()) {
+        if (principal.getRole() == AppRole.ROLE_HOST && bookingRequest.getHost().getId() == principal.getId()) {
             return;
         }
 

@@ -16,7 +16,7 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, In
     List<Accommodation> findAllByHostId(int hostId);
 
     @Query("SELECT a FROM Accommodation a LEFT JOIN FETCH a.host WHERE a.host.id = :hostId")
-    List<Accommodation> findAllByHostIdWithHost(@Param("hostId") int hostId);
+    List<Accommodation> findAllByHostIdWithHost(@Param("hostId") long hostId);
 
     @Query("SELECT a FROM Accommodation a LEFT JOIN FETCH a.host")
     Page<Accommodation> findAllWithHost(Pageable pageable);

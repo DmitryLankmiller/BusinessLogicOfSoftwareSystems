@@ -10,4 +10,8 @@ import ru.ifmo.se.lab.model.User;
 @Repository
 public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByLogin(String login);
+
+    Boolean existsByLogin(String login);
+
+    Boolean existsByEmail(String email);
 }

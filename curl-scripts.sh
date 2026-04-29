@@ -1,4 +1,5 @@
 export BASE_URL="http://localhost:8080/api"
+export BASE_URL="http://139.100.194.182:8080/api"
 
 ADMIN_LOGIN="admin"
 HOST_LOGIN="host1"
@@ -8,19 +9,49 @@ ADMIN_ROLE="ADMIN"
 HOST_ROLE="HOST"
 USER_ROLE="USER"
 
-export ADMIN_HEADERS=(-H "X-User-Login: $ADMIN_LOGIN" -H "X-User-Role: $ADMIN_ROLE")
-export HOST_HEADERS=(-H "X-User-Login: $HOST_LOGIN" -H "X-User-Role: $HOST_ROLE")
-export USER_HEADERS=(-H "X-User-Login: $USER_LOGIN" -H "X-User-Role: $USER_ROLE")
+export TOKEN=$(curl -X POST "$BASE_URL/auth/signin" \
+  "${JSON_HEADER[@]}" \
+  -d '{
+    "login": "admin",
+    "password": "admin123"
+  }' | jq -r '.token')
+
 export JSON_HEADER=(-H "Content-Type: application/json")
 
+curl -X POST "$BASE_URL/auth/signin" \
+  "${JSON_HEADER[@]}" \
+  -d '{
+    "login": "admin",
+    "password": "admin123"
+  }'
+
+curl -X POST "$BASE_URL/auth/signup" \
+  "${JSON_HEADER[@]}" \
+  -d '{
+    "login": "user123",
+    "name": "User123",
+    "email": "user123@email.me",
+    "password": "123456"
+  }'
+
+
+curl -X POST "$BASE_URL/auth/signup?host" \
+  "${JSON_HEADER[@]}" \
+  -d '{
+    "login": "host123",
+    "name": "Host123",
+    "email": "host123@email.me",
+    "password": "123456"
+  }'
+
 curl -X GET "$BASE_URL/users?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${ADMIN_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/users/1" \
-  "${ADMIN_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X POST "$BASE_URL/users" \
-  "${ADMIN_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "login": "user2",
@@ -29,19 +60,19 @@ curl -X POST "$BASE_URL/users" \
   }'
 
 curl -X DELETE "$BASE_URL/users/5" \
-  "${ADMIN_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/accommodations?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${HOST_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/accommodations?check_in=2026-05-10&check_out=2026-05-15&guests_count=2&page=0&size=10&sort_by=price_per_night&sort_dir=asc" \
-  "${USER_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/accommodations/1" \
-  "${HOST_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X POST "$BASE_URL/accommodations" \
-  "${HOST_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "host_id": 2,
@@ -56,7 +87,7 @@ curl -X POST "$BASE_URL/accommodations" \
   }'
 
 curl -X PUT "$BASE_URL/accommodations/1" \
-  "${HOST_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "host_id": 2,
@@ -71,26 +102,25 @@ curl -X PUT "$BASE_URL/accommodations/1" \
   }'
 
 curl -X DELETE "$BASE_URL/accommodations/3" \
-  "${ADMIN_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/bookings?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${ADMIN_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/bookings?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${USER_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/bookings?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${HOST_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/bookings?accommodation=1&page=0&size=10&sort_by=check_in&sort_dir=asc" \
-  "${HOST_HEADERS[@]}"
-
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/bookings/1" \
-  "${USER_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X POST "$BASE_URL/bookings" \
-  "${ADMIN_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "accommodation_id": 1,
@@ -101,7 +131,7 @@ curl -X POST "$BASE_URL/bookings" \
   }'
 
 curl -X PUT "$BASE_URL/bookings/1" \
-  "${ADMIN_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "accommodation_id": 1,
@@ -112,25 +142,19 @@ curl -X PUT "$BASE_URL/bookings/1" \
   }'
 
 curl -X DELETE "$BASE_URL/bookings/2" \
-  "${ADMIN_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/booking-requests?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${ADMIN_HEADERS[@]}"
-
-curl -X GET "$BASE_URL/booking-requests?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${USER_HEADERS[@]}"
-
-curl -X GET "$BASE_URL/booking-requests?page=0&size=10&sort_by=id&sort_dir=asc" \
-  "${HOST_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/booking-requests?accommodation=1&page=0&size=10&sort_by=check_in&sort_dir=asc" \
-  "${HOST_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X GET "$BASE_URL/booking-requests/1" \
-  "${USER_HEADERS[@]}"
+  -H "Authorization: Bearer $TOKEN"
 
 curl -X POST "$BASE_URL/booking-requests" \
-  "${USER_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "accommodation_id": 1,
@@ -150,7 +174,7 @@ curl -X POST "$BASE_URL/booking-requests" \
   }'
 
 curl -X POST "$BASE_URL/booking-requests/7/resolved" \
-  "${HOST_HEADERS[@]}" \
+  -H "Authorization: Bearer $TOKEN" \
   "${JSON_HEADER[@]}" \
   -d '{
     "confirm": true,

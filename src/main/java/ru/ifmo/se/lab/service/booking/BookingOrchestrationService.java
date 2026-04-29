@@ -1,4 +1,4 @@
-package ru.ifmo.se.lab.service;
+package ru.ifmo.se.lab.service.booking;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -9,9 +9,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,7 @@ import ru.ifmo.se.lab.dto.DtoMapper;
 import ru.ifmo.se.lab.exception.ConflictException;
 import ru.ifmo.se.lab.exception.ResourceNotFoundException;
 import ru.ifmo.se.lab.model.Accommodation;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.Booking;
 import ru.ifmo.se.lab.model.BookingRequest;
 import ru.ifmo.se.lab.model.PaymentConfirmation;
@@ -33,8 +38,8 @@ import ru.ifmo.se.lab.repository.BookingRequestRepository;
 import ru.ifmo.se.lab.repository.PaymentConfirmationRepository;
 import ru.ifmo.se.lab.repository.UserRepository;
 import ru.ifmo.se.lab.security.AccessService;
-import ru.ifmo.se.lab.security.AppPrincipal;
-import ru.ifmo.se.lab.security.AppRole;
+import ru.ifmo.se.lab.security.SecurityUtils;
+import ru.ifmo.se.lab.service.mail.MailService;
 import ru.ifmo.se.lab.service.payment.PaymentService;
 
 @Service
@@ -53,22 +58,21 @@ public class BookingOrchestrationService {
     private final MailService mailService;
     private final AccessService accessService;
 
+    private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final Map<Integer, ScheduledFuture<?>> bookingRequestTimeouts = new ConcurrentHashMap<>();
 
-    @Transactional
-    public BookingRequestDto createBookingRequest(AppPrincipal principal,
+    public BookingRequestDto createBookingRequest(
             BookingRequestCreateDto bookingRequestCreateDto) {
-        log.debug("here1");
-        if (principal.getRole() != AppRole.ADMIN && principal.getRole() != AppRole.USER) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() != AppRole.ROLE_ADMIN && principal.getRole() != AppRole.ROLE_USER) {
             throw new AccessDeniedException("Access denied");
         }
-        log.debug("here2");
 
-        if (principal.getRole() == AppRole.USER && principal.getId() != bookingRequestCreateDto.getClientId()) {
+        if (principal.getRole() == AppRole.ROLE_USER && principal.getId() != bookingRequestCreateDto.getClientId()) {
             throw new AccessDeniedException("Access denied");
         }
-        log.debug("here3");
 
         Accommodation accommodation = accommodationRepository.findById(bookingRequestCreateDto.getAccommodationId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -91,36 +95,46 @@ public class BookingOrchestrationService {
                 bookingRequestCreateDto.getCheckOut());
         long amount = nights * accommodation.getPricePerNight();
 
-        PaymentData paymentData = paymentService.executeHold(
-                client,
-                amount,
-                "Booking request for accommodation %d".formatted(accommodation.getId()),
-                bookingRequestCreateDto.getPaymentInputInfo());
+        return transactionTemplate.execute((status) -> {
+            PaymentData paymentData = paymentService.executeHold(
+                    client,
+                    amount,
+                    "Booking request for accommodation %d".formatted(accommodation.getId()),
+                    bookingRequestCreateDto.getPaymentInputInfo());
+            eventPublisher.publishEvent(new BookingHoldExecutedEvent(this, paymentData));
 
-        BookingRequest bookingRequest = BookingRequest.builder()
-                .accommodation(accommodation)
-                .client(client)
-                .host(host)
-                .paymentData(paymentData)
-                .checkIn(bookingRequestCreateDto.getCheckIn())
-                .checkOut(bookingRequestCreateDto.getCheckOut())
-                .messageToHost(bookingRequestCreateDto.getMessageToHost())
-                .build();
+            BookingRequest bookingRequest = BookingRequest.builder()
+                    .accommodation(accommodation)
+                    .client(client)
+                    .host(host)
+                    .paymentData(paymentData)
+                    .checkIn(bookingRequestCreateDto.getCheckIn())
+                    .checkOut(bookingRequestCreateDto.getCheckOut())
+                    .messageToHost(bookingRequestCreateDto.getMessageToHost())
+                    .build();
 
-        BookingRequest savedBookingRequest = bookingRequestRepository.save(bookingRequest);
+            BookingRequest savedBookingRequest = bookingRequestRepository.save(bookingRequest);
 
-        mailService.sendBookingRequestToHost(savedBookingRequest);
-        scheduleTimeout(savedBookingRequest.getId());
+            mailService.sendBookingRequestToHost(savedBookingRequest);
 
-        return DtoMapper.toDto(savedBookingRequest);
+            scheduleTimeout(savedBookingRequest.getId());
+
+            return DtoMapper.toDto(savedBookingRequest);
+        });
     }
 
-    @Transactional
-    public void resolveBookingRequest(AppPrincipal principal, int bookingRequestId, boolean confirm, String reason) {
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    public void handleBookingRequestFailed(BookingHoldExecutedEvent holdExecutedEvent) {
+        log.warn("Cancel payment hold with id=%d".formatted(holdExecutedEvent.getPaymentData().getId()));
+        paymentService.handleCancel(holdExecutedEvent.getPaymentData());
+    }
+
+    public void resolveBookingRequest(int bookingRequestId, boolean confirm, String reason) {
         BookingRequest bookingRequest = bookingRequestRepository.findById(bookingRequestId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "BookingRequest with id=%d not found".formatted(bookingRequestId)));
 
+        var principal = SecurityUtils.getCurrentPrincipal();
         accessService.checkBookingRequestResolveAccess(principal, bookingRequest);
         cancelTimeout(bookingRequestId);
 
@@ -138,8 +152,6 @@ public class BookingOrchestrationService {
                     bookingRequest.getCheckIn(),
                     bookingRequest.getCheckOut());
 
-            paymentService.handleCapture(bookingRequest.getPaymentData());
-
             long price = calculatePrice(bookingRequest);
 
             Booking booking = Booking.builder()
@@ -150,20 +162,35 @@ public class BookingOrchestrationService {
                     .price(price)
                     .build();
 
-            Booking savedBooking = bookingRepository.save(booking);
+            transactionTemplate.executeWithoutResult(status -> {
+                Booking savedBooking = bookingRepository.save(booking);
 
-            paymentConfirmationRepository.save(
-                    PaymentConfirmation.builder()
-                            .paymentData(bookingRequest.getPaymentData())
-                            .booking(savedBooking)
-                            .build());
+                paymentConfirmationRepository.save(
+                        PaymentConfirmation.builder()
+                                .paymentData(bookingRequest.getPaymentData())
+                                .booking(savedBooking)
+                                .build());
 
-            mailService.sendBookingConfirmedToClient(savedBooking);
+                mailService.sendBookingConfirmedToClient(savedBooking);
+                eventPublisher.publishEvent(new BookingConfirmedEmailSentEvent(this, savedBooking.getId(),
+                        savedBooking.getUser().getEmail(), savedBooking.getAccommodation().getId()));
+
+                // throw new RuntimeException("Test capture failed");
+                paymentService.handleCapture(bookingRequest.getPaymentData());
+            });
+
             return;
         }
 
         paymentService.handleCancel(bookingRequest.getPaymentData());
         mailService.sendBookingRejectedToClient(bookingRequest, reason);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    public void handleCaptureFailed(BookingConfirmedEmailSentEvent captureFailedEvent) {
+        log.warn("Capture failed for booking with id=%d".formatted(captureFailedEvent.getBookingId()));
+        mailService.sendCaptureFailedToClient(captureFailedEvent.getBookingId(), captureFailedEvent.getUserEmail(),
+                captureFailedEvent.getAccommodationId());
     }
 
     @Transactional
@@ -202,7 +229,7 @@ public class BookingOrchestrationService {
         ScheduledFuture<?> scheduledFuture = scheduler.schedule(
                 () -> handleTimeout(bookingRequestId),
                 HOST_RESPONSE_TIMEOUT_HOURS,
-                TimeUnit.MINUTES);
+                TimeUnit.HOURS);
         bookingRequestTimeouts.put(bookingRequestId, scheduledFuture);
     }
 

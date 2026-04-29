@@ -17,13 +17,13 @@ import ru.ifmo.se.lab.dto.DtoMapper;
 import ru.ifmo.se.lab.dto.PageResponse;
 import ru.ifmo.se.lab.exception.ResourceNotFoundException;
 import ru.ifmo.se.lab.model.Accommodation;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.User;
 import ru.ifmo.se.lab.repository.AccommodationRepository;
 import ru.ifmo.se.lab.repository.BookingRepository;
 import ru.ifmo.se.lab.repository.UserRepository;
 import ru.ifmo.se.lab.security.AccessService;
-import ru.ifmo.se.lab.security.AppPrincipal;
-import ru.ifmo.se.lab.security.AppRole;
+import ru.ifmo.se.lab.security.SecurityUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -35,18 +35,19 @@ public class AccommodationCrudService {
     private final AccessService accessService;
 
     public PageResponse<AccommodationDto> findAccommodations(
-            AppPrincipal principal,
             int page,
             int size,
             String sortBy,
             String sortDir) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             Sort sort = buildSort(sortBy, sortDir);
-            Page<Accommodation> accommodations = accommodationRepository.findAllWithHost(PageRequest.of(page, size, sort));
+            Page<Accommodation> accommodations = accommodationRepository
+                    .findAllWithHost(PageRequest.of(page, size, sort));
             return buildAccommodationPageResponse(accommodations);
         }
 
-        if (principal.getRole() == AppRole.HOST) {
+        if (principal.getRole() == AppRole.ROLE_HOST) {
             List<Accommodation> accommodations = accommodationRepository.findAllByHostIdWithHost(principal.getId());
             List<Accommodation> sorted = sortAccommodations(accommodations, sortBy, sortDir);
             return buildAccommodationPageResponse(sorted, page, size);
@@ -56,7 +57,6 @@ public class AccommodationCrudService {
     }
 
     public PageResponse<AccommodationDto> findAvailableAccommodations(
-            AppPrincipal principal,
             LocalDate checkIn,
             LocalDate checkOut,
             short guestsCount,
@@ -64,7 +64,8 @@ public class AccommodationCrudService {
             int size,
             String sortBy,
             String sortDir) {
-        if (principal.getRole() != AppRole.ADMIN && principal.getRole() != AppRole.USER) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() != AppRole.ROLE_ADMIN && principal.getRole() != AppRole.ROLE_USER) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -83,7 +84,8 @@ public class AccommodationCrudService {
         return buildAccommodationPageResponse(sorted, page, size);
     }
 
-    public AccommodationDto findAccommodationById(AppPrincipal principal, int id) {
+    public AccommodationDto findAccommodationById(int id) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         Accommodation accommodation = accommodationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Accommodation with id=%d not found".formatted(id)));
 
@@ -91,7 +93,8 @@ public class AccommodationCrudService {
         return DtoMapper.toDto(accommodation);
     }
 
-    public AccommodationDto addAccommodation(AppPrincipal principal, AccommodationDto accommodationDto) {
+    public AccommodationDto addAccommodation(AccommodationDto accommodationDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         accessService.checkAccommodationCreateAccess(principal, accommodationDto.getHostId());
 
         User host = userRepository.findById(accommodationDto.getHostId())
@@ -108,14 +111,15 @@ public class AccommodationCrudService {
                 .rating(accommodationDto.getRating() == null ? 0f : accommodationDto.getRating())
                 .pricePerNight(accommodationDto.getPricePerNight())
                 .isPublished(Boolean.TRUE.equals(accommodationDto.getPublished())
-                        && principal.getRole().equals(AppRole.ADMIN))
+                        && principal.getRole().equals(AppRole.ROLE_ADMIN))
                 .build();
 
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
         return DtoMapper.toDto(savedAccommodation);
     }
 
-    public AccommodationDto updateAccommodation(AppPrincipal principal, int id, AccommodationDto accommodationDto) {
+    public AccommodationDto updateAccommodation(int id, AccommodationDto accommodationDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
         Accommodation accommodation = accommodationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Accommodation with id=%d not found".formatted(id)));
 
@@ -125,7 +129,7 @@ public class AccommodationCrudService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User with id=%d not found".formatted(accommodationDto.getHostId())));
 
-        if (principal.getRole() == AppRole.HOST && principal.getId() != host.getId()) {
+        if (principal.getRole() == AppRole.ROLE_HOST && principal.getId() != host.getId()) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -138,14 +142,15 @@ public class AccommodationCrudService {
         accommodation.setRating(accommodationDto.getRating() == null ? 0f : accommodationDto.getRating());
         accommodation.setPricePerNight(accommodationDto.getPricePerNight());
         accommodation.setPublished(
-                Boolean.TRUE.equals(accommodationDto.getPublished()) && principal.getRole().equals(AppRole.ADMIN));
+                Boolean.TRUE.equals(accommodationDto.getPublished()) && principal.getRole().equals(AppRole.ROLE_ADMIN));
 
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
         return DtoMapper.toDto(savedAccommodation);
     }
 
-    public void deleteAccommodation(AppPrincipal principal, int id) {
-        if (principal.getRole() != AppRole.ADMIN) {
+    public void deleteAccommodation(int id) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() != AppRole.ROLE_ADMIN) {
             throw new AccessDeniedException("Access denied");
         }
 

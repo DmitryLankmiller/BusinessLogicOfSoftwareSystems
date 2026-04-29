@@ -1,4 +1,4 @@
-package ru.ifmo.se.lab.service;
+package ru.ifmo.se.lab.service.booking;
 
 import java.util.Comparator;
 import java.util.List;
@@ -16,6 +16,7 @@ import ru.ifmo.se.lab.dto.DtoMapper;
 import ru.ifmo.se.lab.dto.PageResponse;
 import ru.ifmo.se.lab.exception.ResourceNotFoundException;
 import ru.ifmo.se.lab.model.Accommodation;
+import ru.ifmo.se.lab.model.AppRole;
 import ru.ifmo.se.lab.model.BookingRequest;
 import ru.ifmo.se.lab.model.PaymentData;
 import ru.ifmo.se.lab.model.User;
@@ -24,8 +25,7 @@ import ru.ifmo.se.lab.repository.BookingRequestRepository;
 import ru.ifmo.se.lab.repository.PaymentDataRepository;
 import ru.ifmo.se.lab.repository.UserRepository;
 import ru.ifmo.se.lab.security.AccessService;
-import ru.ifmo.se.lab.security.AppPrincipal;
-import ru.ifmo.se.lab.security.AppRole;
+import ru.ifmo.se.lab.security.SecurityUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -38,24 +38,24 @@ public class BookingRequestCrudService {
     private final AccessService accessService;
 
     public PageResponse<BookingRequestDto> findBookingRequests(
-            AppPrincipal principal,
             int page,
             int size,
             String sortBy,
             String sortDir) {
-        if (principal.getRole() == AppRole.ADMIN) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             Sort sort = buildSort(sortBy, sortDir);
             Page<BookingRequest> bookingRequests = bookingRequestRepository.findAll(PageRequest.of(page, size, sort));
             return buildBookingRequestPageResponse(bookingRequests);
         }
 
-        if (principal.getRole() == AppRole.USER) {
+        if (principal.getRole() == AppRole.ROLE_USER) {
             List<BookingRequest> bookingRequests = bookingRequestRepository.findAllByClientId(principal.getId());
             List<BookingRequest> sorted = sortBookingRequests(bookingRequests, sortBy, sortDir);
             return buildBookingRequestPageResponse(sorted, page, size);
         }
 
-        if (principal.getRole() == AppRole.HOST) {
+        if (principal.getRole() == AppRole.ROLE_HOST) {
             List<BookingRequest> bookingRequests = bookingRequestRepository.findAllByHostId(principal.getId());
             List<BookingRequest> sorted = sortBookingRequests(bookingRequests, sortBy, sortDir);
             return buildBookingRequestPageResponse(sorted, page, size);
@@ -65,7 +65,6 @@ public class BookingRequestCrudService {
     }
 
     public PageResponse<BookingRequestDto> findBookingRequestsByAccommodation(
-            AppPrincipal principal,
             int accommodationId,
             int page,
             int size,
@@ -73,9 +72,10 @@ public class BookingRequestCrudService {
             String sortDir) {
         List<BookingRequest> bookingRequests;
 
-        if (principal.getRole() == AppRole.ADMIN) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() == AppRole.ROLE_ADMIN) {
             bookingRequests = bookingRequestRepository.findAllByAccommodationId(accommodationId);
-        } else if (principal.getRole() == AppRole.HOST) {
+        } else if (principal.getRole() == AppRole.ROLE_HOST) {
             bookingRequests = bookingRequestRepository.findAllByAccommodationIdAndHostId(accommodationId,
                     principal.getId());
         } else {
@@ -86,21 +86,23 @@ public class BookingRequestCrudService {
         return buildBookingRequestPageResponse(sorted, page, size);
     }
 
-    public BookingRequestDto findBookingRequestById(AppPrincipal principal, int id) {
+    public BookingRequestDto findBookingRequestById(int id) {
         BookingRequest bookingRequest = bookingRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "BookingRequest with id=%d not found".formatted(id)));
 
+        var principal = SecurityUtils.getCurrentPrincipal();
         accessService.checkBookingRequestReadAccess(principal, bookingRequest);
         return DtoMapper.toDto(bookingRequest);
     }
 
-    public BookingRequestDto addBookingRequest(AppPrincipal principal, BookingRequestDto bookingRequestDto) {
-        if (principal.getRole() != AppRole.ADMIN && principal.getRole() != AppRole.USER) {
+    public BookingRequestDto addBookingRequest(BookingRequestDto bookingRequestDto) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() != AppRole.ROLE_ADMIN && principal.getRole() != AppRole.ROLE_USER) {
             throw new AccessDeniedException("Access denied");
         }
 
-        if (principal.getRole() == AppRole.USER && principal.getId() != bookingRequestDto.getClientId()) {
+        if (principal.getRole() == AppRole.ROLE_USER && principal.getId() != bookingRequestDto.getClientId()) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -134,17 +136,18 @@ public class BookingRequestCrudService {
         return DtoMapper.toDto(savedBookingRequest);
     }
 
-    public BookingRequestDto updateBookingRequest(AppPrincipal principal, int id, BookingRequestDto bookingRequestDto) {
+    public BookingRequestDto updateBookingRequest(int id, BookingRequestDto bookingRequestDto) {
         BookingRequest bookingRequest = bookingRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "BookingRequest with id=%d not found".formatted(id)));
 
-        if (principal.getRole() == AppRole.USER) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() == AppRole.ROLE_USER) {
             if (bookingRequest.getClient().getId() != principal.getId()
                     || bookingRequestDto.getClientId() != principal.getId()) {
                 throw new AccessDeniedException("Access denied");
             }
-        } else if (principal.getRole() != AppRole.ADMIN) {
+        } else if (principal.getRole() != AppRole.ROLE_ADMIN) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -176,16 +179,17 @@ public class BookingRequestCrudService {
         return DtoMapper.toDto(savedBookingRequest);
     }
 
-    public void deleteBookingRequest(AppPrincipal principal, int id) {
+    public void deleteBookingRequest(int id) {
         BookingRequest bookingRequest = bookingRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "BookingRequest with id=%d not found".formatted(id)));
 
-        if (principal.getRole() == AppRole.USER) {
+        var principal = SecurityUtils.getCurrentPrincipal();
+        if (principal.getRole() == AppRole.ROLE_USER) {
             if (bookingRequest.getClient().getId() != principal.getId()) {
                 throw new AccessDeniedException("Access denied");
             }
-        } else if (principal.getRole() != AppRole.ADMIN) {
+        } else if (principal.getRole() != AppRole.ROLE_ADMIN) {
             throw new AccessDeniedException("Access denied");
         }
 
